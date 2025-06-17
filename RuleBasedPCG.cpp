@@ -68,17 +68,79 @@ Map drunkAgent(const Map& currentMap, int W, int H, int J, int I, int roomSizeX,
                double probGenerateRoom, double probIncreaseRoom,
                double probChangeDirection, double probIncreaseChange,
                int& agentX, int& agentY) {
-    Map newMap = currentMap; // The new map is a copy of the current one
+    Map newMap = currentMap;
 
-    // TODO: IMPLEMENTATION GOES HERE for the Drunk Agent logic.
-    // The agent should move randomly.
-    // You'll need a random number generator.
-    // Consider:
-    // - How the agent moves (possible steps).
-    // - What it does if it encounters a border or an obstacle (if applicable).
-    // - How it modifies the map (e.g., leaving a trail, creating rooms, etc.).
-    // - Use the provided parameters (J, I, roomSizeX, roomSizeY, probabilities)
-    //   to control its behavior.
+    // Generador aleatorio
+    unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+    std::default_random_engine rng(seed);
+    std::uniform_real_distribution<double> prob(0.0, 1.0);
+    std::uniform_int_distribution<int> dirDist(0, 3);
+    std::uniform_int_distribution<int> roomW(1, roomSizeX);
+    std::uniform_int_distribution<int> roomH(1, roomSizeY);
+
+    // Direcciones: izquierda, derecha, arriba, abajo
+    std::vector<std::pair<int, int>> directions = {
+        {0, -1}, {0, 1}, {-1, 0}, {1, 0}
+    };
+
+    // Dirección inicial aleatoria
+    auto dir = directions[dirDist(rng)];
+    int dx = dir.first;
+    int dy = dir.second;
+
+    for (int j = 0; j < J; ++j) {
+        for (int i = 0; i < I; ++i) {
+            // Marca el camino
+            if (agentX >= 0 && agentX < H && agentY >= 0 && agentY < W) {
+                newMap[agentX][agentY] = 1;
+            }
+
+            // Probabilidad de generar habitación centrada en el agente
+            if (prob(rng) < probGenerateRoom) {
+                int rw = roomW(rng);
+                int rh = roomH(rng);
+                int startX = agentX - rh / 2;
+                int startY = agentY - rw / 2;
+
+                for (int x = 0; x < rh; ++x) {
+                    for (int y = 0; y < rw; ++y) {
+                        int rx = startX + x;
+                        int ry = startY + y;
+                        if (rx >= 0 && rx < H && ry >= 0 && ry < W)
+                            newMap[rx][ry] = 1;
+                    }
+                }
+
+                probGenerateRoom = 0.1; // Reinicia
+            } else {
+                probGenerateRoom += probIncreaseRoom;
+            }
+
+            // Probabilidad de cambiar dirección
+            if (prob(rng) < probChangeDirection) {
+                auto newDir = directions[dirDist(rng)];
+                dx = newDir.first;
+                dy = newDir.second;
+                probChangeDirection = 0.2; // Reinicia
+            } else {
+                probChangeDirection += probIncreaseChange;
+            }
+
+            // Mover al agente
+            int newX = agentX + dx;
+            int newY = agentY + dy;
+
+            if (newX >= 0 && newX < H && newY >= 0 && newY < W) {
+                agentX = newX;
+                agentY = newY;
+            } else {
+                // Si se sale del mapa, cambia dirección
+                auto newDir = directions[dirDist(rng)];
+                dx = newDir.first;
+                dy = newDir.second;
+            }
+        }
+    }
 
     return newMap;
 }
@@ -96,8 +158,11 @@ int main() {
     // or place the drunk agent at a specific position.
 
     // Drunk Agent's initial position
-    int drunkAgentX = mapRows / 2;
-    int drunkAgentY = mapCols / 2;
+    std::default_random_engine rng(std::chrono::system_clock::now().time_since_epoch().count());
+    std::uniform_int_distribution<int> startX(0, mapRows - 1);
+    std::uniform_int_distribution<int> startY(0, mapCols - 1);
+    int drunkAgentX = startX(rng);
+    int drunkAgentY = startY(rng);
     // If your agent modifies the map at start, you could do it here:
     // myMap[drunkAgentX][drunkAgentY] = 2; // Assuming '2' represents the agent
 
